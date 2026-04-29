@@ -7,6 +7,13 @@ import { Camera, Share2, MessageCircle, Globe, ArrowUpRight } from 'lucide-react
 const Footer = () => {
   const currentYear = new Date().getFullYear();
 
+  const scrollToTop = (e: React.MouseEvent) => {
+    if (window.location.pathname === '/') {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
   return (
     <footer className="bg-black py-16 md:py-20 border-t border-white/5 relative overflow-hidden">
       {/* Decorative Text */}
@@ -19,14 +26,14 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 md:gap-16 mb-20 md:mb-24">
           <div className="space-y-6 md:space-y-8">
-            <Link href="/" className="flex flex-col group">
+            <Link href="/" onClick={scrollToTop} className="flex flex-col group">
               <span className="text-3xl font-display tracking-tighter text-white leading-none uppercase italic font-bold">
                 PROXY<span className="text-primary">CAR</span>
               </span>
-              <span className="text-[8px] uppercase tracking-[0.5em] text-white/30 font-bold mt-1">Luxury Excellence</span>
+              <span className="text-[8px] uppercase tracking-[0.5em] text-white/30 font-bold mt-1">Achat & Location</span>
             </Link>
             <p className="text-white/30 text-sm leading-relaxed max-w-xs uppercase tracking-widest font-medium">
-              Votre partenaire de confiance pour l&apos;achat et la revente de véhicules de prestige et d&apos;exception.
+              Votre partenaire de confiance pour l&apos;achat, la vente et la location de véhicules toutes marques.
             </p>
           </div>
 
@@ -34,14 +41,15 @@ const Footer = () => {
             <h4 className="text-white font-display text-lg uppercase tracking-widest italic font-bold">Navigation</h4>
             <ul className="space-y-4">
               {[
-                { label: 'Accueil', href: '/' },
+                { label: 'Accueil', href: '/', onClick: scrollToTop },
                 { label: 'Marketplace', href: '/marketplace' },
                 { label: 'Estimation', href: '/estimation' },
                 { label: 'Contact', href: '/#contact' }
               ].map((item) => (
-                <li key={item.href}>
+                <li key={item.label}>
                   <Link
                     href={item.href}
+                    onClick={item.onClick}
                     className="text-white/40 hover:text-primary transition-colors text-xs uppercase tracking-[0.3em] font-bold flex items-center gap-2 group"
                   >
                     {item.label}
@@ -106,7 +114,7 @@ const Footer = () => {
           </div>
 
           <p className="text-white/20 text-[10px] uppercase tracking-[0.3em] font-bold">
-            &copy; {currentYear} PROXY CAR. Design by <span className="text-white/40">Premium Studio</span>
+            &copy; {currentYear} PROXY CAR. Design by <span className="text-white/40">Modern Studio</span>
           </p>
         </div>
       </div>

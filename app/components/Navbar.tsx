@@ -49,7 +49,7 @@ const Navbar = () => {
               <span className="text-xl md:text-2xl font-display tracking-tighter text-white leading-none uppercase italic font-bold">
                 PROXY<span className="text-primary">CAR</span>
               </span>
-              <span className="text-[7px] md:text-[8px] uppercase tracking-[0.5em] text-white/40 font-bold">Luxury Excellence</span>
+              <span className="text-[7px] md:text-[8px] uppercase tracking-[0.5em] text-white/40 font-bold">Achat & Location</span>
             </div>
           </Link>
 
@@ -105,7 +105,7 @@ const Navbar = () => {
           <div className={`space-y-8 transition-all duration-700 delay-500 transform ${isMenuOpen ? 'translate-y-0 opacity-100' : 'translate-y-10 opacity-0'
             }`}>
             <div className="h-[1px] w-12 bg-primary"></div>
-            <p className="text-[10px] uppercase tracking-[0.5em] text-white/40 font-bold">L&apos;Excellence à votre portée</p>
+            <p className="text-[10px] uppercase tracking-[0.5em] text-white/40 font-bold">Votre partenaire automobile</p>
             <div className="flex gap-10 text-white/60">
               <Camera size={24} className="hover:text-primary transition-all duration-300 hover:scale-125 cursor-pointer" />
               <Share2 size={24} className="hover:text-primary transition-all duration-300 hover:scale-125 cursor-pointer" />

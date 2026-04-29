@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useRef } from 'react';
+import React, { useRef, useState, useMemo } from 'react';
 import Image from 'next/image';
-import { ArrowUpRight, Gauge, Fuel, Shield } from 'lucide-react';
+import { ArrowUpRight, Gauge, Fuel, Calendar, MessageCircle, Info } from 'lucide-react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/dist/ScrollTrigger';
 import { useGSAP } from '@gsap/react';
@@ -14,160 +14,215 @@ if (typeof window !== 'undefined') {
 const cars = [
   {
     id: 1,
-    name: 'Berline de Luxe',
-    brand: 'Mercedes-Benz',
-    price: '45 900 €',
-    image: '/images/car1.png',
-    specs: { hp: '250 ch', type: 'Hybride', safety: '5*' }
+    name: 'Renault Clio 1.0 TCe',
+    brand: 'Renault',
+    type: 'occasion',
+    price: '13 900 €',
+    image: '/images/clio.png',
+    specs: { mileage: '45 000 km', year: '2020', fuel: 'Essence' }
   },
   {
     id: 2,
-    name: 'SUV Premium',
-    brand: 'Audi',
-    price: '62 500 €',
-    image: '/images/car2.png',
-    specs: { hp: '340 ch', type: 'Diesel', safety: '5*' }
+    name: 'Volkswagen Golf 8 2.0 TDI',
+    brand: 'Volkswagen',
+    type: 'occasion',
+    price: '24 500 €',
+    image: '/images/golf.png',
+    specs: { mileage: '32 000 km', year: '2021', fuel: 'Diesel' }
   },
   {
     id: 3,
-    name: 'Sportive Exclusive',
-    brand: 'Porsche',
-    price: '89 000 €',
-    image: '/images/car3.png',
-    specs: { hp: '450 ch', type: 'Essence', safety: '5*' }
+    name: 'Peugeot 208 PureTech',
+    brand: 'Peugeot',
+    type: 'location',
+    price: '45 €',
+    period: '/ jour',
+    image: '/images/p208.png',
+    specs: { mileage: '15 000 km', year: '2022', fuel: 'Essence' }
+  },
+  {
+    id: 4,
+    name: 'Toyota Yaris Hybrid',
+    brand: 'Toyota',
+    type: 'location',
+    price: '55 €',
+    period: '/ jour',
+    image: '/images/yaris.png',
+    specs: { mileage: '12 000 km', year: '2023', fuel: 'Hybride' }
+  },
+  {
+    id: 5,
+    name: 'Dacia Sandero Stepway',
+    brand: 'Dacia',
+    type: 'occasion',
+    price: '15 800 €',
+    image: '/images/sandero.png',
+    specs: { mileage: '15 000 km', year: '2022', fuel: 'GPL' }
   },
 ];
 
 const Vehicles = () => {
+  const [activeFilter, setActiveFilter] = useState<'tous' | 'occasion' | 'location'>('tous');
   const containerRef = useRef<HTMLDivElement>(null);
-  const cardsRef = useRef<HTMLDivElement[]>([]);
+  const cardsRef = useRef<(HTMLDivElement | null)[]>([]);
+
+  const filteredCars = useMemo(() => {
+    if (activeFilter === 'tous') return cars;
+    return cars.filter(car => car.type === activeFilter);
+  }, [activeFilter]);
 
   useGSAP(() => {
     if (!containerRef.current) return;
 
-    // Delayed refresh to ensure Preloader has cleared
-    const timer = setTimeout(() => {
-      ScrollTrigger.refresh();
-    }, 500);
+    // Reset refs array
+    cardsRef.current = cardsRef.current.slice(0, filteredCars.length);
 
-    // Entrance Animation for the whole section
+    // Initial entrance for header
     gsap.from('.vehicles-header', {
-      y: 60,
+      y: 40,
       opacity: 0,
       duration: 1,
       ease: 'power3.out',
-      immediateRender: false,
       scrollTrigger: {
         trigger: containerRef.current,
-        start: 'top bottom',
-        toggleActions: 'play none none none'
+        start: 'top 80%',
       }
     });
 
     // Staggered reveal for car cards
-    gsap.from(cardsRef.current, {
-      y: 80,
-      opacity: 0,
-      duration: 1.2,
-      stagger: 0.15,
-      ease: 'power3.out',
-      immediateRender: false,
-      scrollTrigger: {
-        trigger: '.vehicles-grid',
-        start: 'top bottom',
-        toggleActions: 'play none none none'
+    gsap.fromTo(cardsRef.current, 
+      { y: 50, opacity: 0 },
+      { 
+        y: 0, 
+        opacity: 1, 
+        duration: 0.8, 
+        stagger: 0.1, 
+        ease: 'power2.out',
+        overwrite: 'auto'
       }
-    });
+    );
 
-    return () => clearTimeout(timer);
-  }, { scope: containerRef });
+  }, { scope: containerRef, dependencies: [filteredCars] });
 
   return (
-    <section id="vehicles" ref={containerRef} className="py-20 md:py-28 bg-black relative overflow-hidden">
-      {/* Decorative Text Background */}
-      <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.02] flex items-center justify-center select-none">
-        <span className="text-[30vw] font-display font-bold uppercase tracking-tighter">COLLECTION</span>
-      </div>
-
+    <section id="vehicles" ref={containerRef} className="py-20 md:py-32 bg-black relative overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 relative z-10">
-        <div className="vehicles-header flex flex-col md:flex-row md:items-end justify-between mb-16 md:mb-24 gap-10">
-          <div className="max-w-3xl">
-            <span className="text-primary font-bold uppercase tracking-[0.5em] text-[10px] mb-8 block">Notre Stock</span>
-            <h2 className="text-[clamp(3rem,8vw,6rem)] font-display font-bold uppercase tracking-tighter leading-none italic">
-              VÉHICULES <br /> <span className="text-white/20">D&apos;EXCEPTION</span>
+        
+        {/* Header Section */}
+        <div className="vehicles-header flex flex-col md:flex-row md:items-end justify-between mb-16 gap-8">
+          <div className="space-y-4">
+            <h2 className="text-[clamp(2.5rem,5vw,4.5rem)] font-display font-bold uppercase tracking-tighter leading-[0.9] text-white">
+              NOS <span className="text-primary italic">VÉHICULES</span>
             </h2>
-          </div>
-          <div className="pb-4">
-            <p className="text-white/40 text-sm uppercase tracking-[0.2em] font-medium max-w-sm leading-relaxed">
-              Chaque véhicule est rigoureusement sélectionné et préparé dans nos ateliers par nos experts.
+            <p className="text-white/50 text-sm md:text-base max-w-md font-medium tracking-tight">
+              Découvrez nos véhicules disponibles immédiatement à l&apos;achat ou à la location courte et longue durée.
             </p>
+          </div>
+
+          {/* Filter Tabs */}
+          <div className="flex bg-white/5 p-1 rounded-2xl border border-white/10 backdrop-blur-sm self-start">
+            {(['tous', 'occasion', 'location'] as const).map((filter) => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={`px-6 py-3 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-300 ${
+                  activeFilter === filter 
+                  ? 'bg-primary text-white shadow-lg shadow-primary/20' 
+                  : 'text-white/40 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                {filter}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="vehicles-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 md:gap-12">
-          {cars.map((car, index) => (
+        {/* Grid Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10">
+          {filteredCars.map((car, index) => (
             <div
               key={car.id}
-              ref={(el) => { if (el) cardsRef.current[index] = el; }}
-              className="group relative flex flex-col glass rounded-2xl overflow-hidden transition-all duration-700 hover:border-primary/30 hover:shadow-[0_0_50px_rgba(255,45,45,0.1)]"
+              ref={(el) => { cardsRef.current[index] = el; }}
+              className="group flex flex-col bg-[#0A0A0A] rounded-3xl overflow-hidden border border-white/5 transition-all duration-500 hover:border-primary/40 hover:scale-[1.03] hover:shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
             >
               {/* Image Container */}
-              <div className="relative h-[400px] md:h-[450px] overflow-hidden">
+              <div className="relative aspect-[4/3] overflow-hidden">
                 <Image
                   src={car.image}
                   alt={car.name}
                   fill
-                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                  className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                  className="object-cover transition-transform duration-700 group-hover:scale-105"
                 />
-                {/* Overlay Gradients */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent"></div>
-
-                {/* Price Badge */}
-                <div className="absolute top-6 right-6 glass px-6 py-2 rounded-full border-white/10 group-hover:border-primary/50 transition-colors duration-500">
-                  <span className="text-white font-bold text-lg">{car.price}</span>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+                
+                {/* Status Badge */}
+                <div className="absolute top-4 left-4">
+                  <span className={`px-4 py-1.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
+                    car.type === 'occasion' 
+                    ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' 
+                    : 'bg-green-500/10 text-green-400 border-green-500/20'
+                  }`}>
+                    {car.type === 'occasion' ? 'À Vendre' : 'Disponible'}
+                  </span>
                 </div>
 
-                {/* Specs Overlay (Visible on Hover) */}
-                <div className="absolute bottom-0 left-0 w-full p-8 translate-y-full group-hover:translate-y-0 transition-transform duration-700 ease-expo bg-black/60 backdrop-blur-md border-t border-white/10">
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="flex flex-col items-center gap-2">
-                      <Gauge size={16} className="text-primary" />
-                      <span className="text-[10px] text-white font-bold uppercase">{car.specs.hp}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <Fuel size={16} className="text-primary" />
-                      <span className="text-[10px] text-white font-bold uppercase">{car.specs.type}</span>
-                    </div>
-                    <div className="flex flex-col items-center gap-2">
-                      <Shield size={16} className="text-primary" />
-                      <span className="text-[10px] text-white font-bold uppercase">{car.specs.safety}</span>
-                    </div>
+                {/* Price Tag */}
+                <div className="absolute bottom-6 left-6">
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-2xl font-bold text-white">{car.price}</span>
+                    {car.period && <span className="text-white/50 text-xs font-medium">{car.period}</span>}
                   </div>
                 </div>
+
+                {/* WhatsApp Quick Action */}
+                <button className="absolute bottom-4 right-4 w-12 h-12 bg-[#25D366] text-white rounded-full flex items-center justify-center opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-500 hover:scale-110 shadow-lg">
+                  <MessageCircle size={20} fill="currentColor" />
+                </button>
               </div>
 
-              {/* Content */}
-              <div className="p-8 md:p-10 flex flex-col flex-grow relative space-y-6">
-                <div className="space-y-4">
-                  <span className="text-primary text-[10px] font-bold uppercase tracking-[0.4em] mb-2 block">{car.brand}</span>
-                  <h3 className="text-2xl md:text-3xl font-display uppercase tracking-widest group-hover:text-primary transition-colors duration-500 italic font-bold leading-tight">{car.name}</h3>
+              {/* Info Content */}
+              <div className="p-6 md:p-8 flex flex-col flex-grow space-y-6">
+                <div className="space-y-2">
+                  <span className="text-primary text-[10px] font-bold uppercase tracking-[0.3em]">{car.brand}</span>
+                  <h3 className="text-xl font-bold text-white tracking-tight">{car.name}</h3>
                 </div>
 
-                <button className="mt-auto group/btn relative flex items-center justify-between w-full py-6 px-10 border border-white/10 rounded-xl overflow-hidden transition-all duration-500 hover:border-primary">
-                  <span className="relative z-10 text-[10px] uppercase tracking-[0.4em] font-bold text-white">Consulter le dossier</span>
-                  <ArrowUpRight size={18} className="relative z-10 text-white group-hover/btn:rotate-45 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-red-gradient translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500"></div>
+                {/* Specs Grid */}
+                <div className="grid grid-cols-3 gap-4 pt-4 border-t border-white/5">
+                  <div className="flex flex-col gap-1">
+                    <Gauge size={14} className="text-white/20" />
+                    <span className="text-[10px] text-white/60 font-medium">{car.specs.mileage}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Calendar size={14} className="text-white/20" />
+                    <span className="text-[10px] text-white/60 font-medium">{car.specs.year}</span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Fuel size={14} className="text-white/20" />
+                    <span className="text-[10px] text-white/60 font-medium">{car.specs.fuel}</span>
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <button className={`w-full py-4 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-3 ${
+                  car.type === 'occasion'
+                  ? 'bg-white text-black hover:bg-primary hover:text-white'
+                  : 'bg-primary text-white hover:bg-white hover:text-black'
+                }`}>
+                  {car.type === 'occasion' ? 'Voir détails' : 'Réserver'}
+                  <ArrowUpRight size={14} />
                 </button>
               </div>
             </div>
           ))}
         </div>
 
-        <div className="mt-24 md:mt-32 flex justify-center">
-          <button className="group flex items-center gap-6 text-[10px] font-bold uppercase tracking-[0.5em] text-white/40 hover:text-white transition-all duration-500">
-            Voir tout l&apos;inventaire
-            <div className="w-12 h-[1px] bg-white/20 group-hover:w-24 group-hover:bg-primary transition-all duration-500"></div>
+        {/* Footer Link */}
+        <div className="mt-20 flex flex-col items-center gap-6">
+          <p className="text-white/30 text-[10px] font-bold uppercase tracking-[0.4em]">Près de 50 autres véhicules en stock</p>
+          <button className="group flex items-center gap-4 px-10 py-5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-2xl transition-all duration-500">
+            <span className="text-[10px] font-bold uppercase tracking-widest text-white">Tout l&apos;inventaire</span>
+            <div className="w-8 h-[1px] bg-primary group-hover:w-12 transition-all duration-500"></div>
           </button>
         </div>
       </div>

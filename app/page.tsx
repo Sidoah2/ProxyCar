@@ -3,8 +3,9 @@
 import React from 'react';
 import Navbar from './components/Navbar';
 import Hero from './components/Hero';
+import HeroCars from './components/HeroCars';
 import Trust from './components/Trust';
-import Vehicles from './components/Vehicles';
+import FeaturedVehicles from './components/FeaturedVehicles';
 import Features from './components/Features';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
@@ -17,8 +18,9 @@ export default function Home() {
     <main className="relative bg-black text-white min-h-screen">
       <Navbar />
       <Hero />
+      <HeroCars />
       <Trust />
-      <Vehicles />
+      <FeaturedVehicles />
 
       {/* Estimation Teaser */}
       <section className="py-20 md:py-28 bg-[#050505] relative overflow-hidden border-y border-white/5">
@@ -54,7 +56,7 @@ export default function Home() {
                 DÉCOUVREZ NOTRE <br /> <span className="text-white/20">MARKETPLACE</span>
               </h2>
               <p className="text-white/40 text-sm uppercase tracking-widest leading-relaxed">
-                Accédez à une sélection exclusive de véhicules premium certifiés et prêts à la route.
+                Accédez à une large sélection de véhicules révisés, certifiés et prêts à rouler dès aujourd&apos;hui.
               </p>
             </div>
             <Link 
