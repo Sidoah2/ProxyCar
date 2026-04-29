@@ -84,6 +84,7 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
 
       const data = await res.json();
       if (!res.ok) {
+        console.error("Submission error detail:", data);
         setErrors(data.errors ?? [data.error ?? 'Erreur inconnue.']);
         return;
       }

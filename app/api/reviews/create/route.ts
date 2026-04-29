@@ -83,7 +83,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, id: ref.id }, { status: 201 });
   } catch (err) {
-    console.error("Review create error:", err);
-    return NextResponse.json({ error: "Erreur interne du serveur." }, { status: 500 });
+    console.error("Review create error detail:", err);
+    return NextResponse.json({
+      error: "Erreur interne du serveur.",
+      details: err instanceof Error ? err.message : String(err)
+    }, { status: 500 });
   }
 }
