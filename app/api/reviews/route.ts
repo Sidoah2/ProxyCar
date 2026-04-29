@@ -36,7 +36,10 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ reviews }, { status: 200 });
   } catch (err) {
-    console.error("Review fetch error:", err);
-    return NextResponse.json({ error: "Erreur interne du serveur." }, { status: 500 });
+    console.error("Review fetch error detail:", err);
+    return NextResponse.json({ 
+      error: "Erreur interne du serveur.", 
+      details: err instanceof Error ? err.message : String(err) 
+    }, { status: 500 });
   }
 }

@@ -28,29 +28,3 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Admin: Delete or hide a review
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const { id } = params;
-    if (!id) {
-      return NextResponse.json({ error: "ID manquant." }, { status: 400 });
-    }
-
-    const body = await req.json().catch(() => ({}));
-    const action = body.action ?? "DELETE"; // "DELETE" or "HIDE"
-
-    if (action === "HIDE") {
-      await adminDb.collection("reviews").doc(id).update({ status: "HIDDEN" });
-      return NextResponse.json({ success: true, action: "HIDDEN" });
-    }
-
-    await adminDb.collection("reviews").doc(id).delete();
-    return NextResponse.json({ success: true, action: "DELETED" });
-  } catch (err) {
-    console.error("Review delete error:", err);
-    return NextResponse.json({ error: "Erreur interne." }, { status: 500 });
-  }
-}
