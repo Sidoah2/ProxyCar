@@ -3,15 +3,19 @@
 import React, { useEffect, useState } from "react";
 import { collection, query, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/app/lib/firebase";
-import { Lead, Listing, Reservation } from "@/app/lib/types";
-import { LayoutDashboard, Car, FileText, Settings, LogOut, ChevronRight, Users, Calendar, AlertTriangle, ExternalLink, MessageCircle, Mail, User, MapPin, Phone } from "lucide-react";
+import { Lead, Listing, Reservation, Review, ServiceType } from "@/app/lib/types";
+import { LayoutDashboard, Car, FileText, LogOut, ChevronRight, Calendar, ExternalLink, MessageCircle, Mail, User, MapPin, Phone, Star, Trash2, EyeOff, Filter, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const DashboardClient = () => {
-  const [view, setView] = useState<"OVERVIEW" | "LISTINGS" | "LEADS" | "RESERVATIONS">("OVERVIEW");
+  const [view, setView] = useState<"OVERVIEW" | "LISTINGS" | "LEADS" | "RESERVATIONS" | "REVIEWS">("OVERVIEW");
   const [leads, setLeads] = useState<Lead[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewFilter, setReviewFilter] = useState<ServiceType | "ALL">("ALL");
+  const [reviewActionId, setReviewActionId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
@@ -100,6 +104,37 @@ const DashboardClient = () => {
     fetchData();
   }, []);
 
+  const fetchReviews = async (filter: ServiceType | "ALL" = "ALL") => {
+    setReviewsLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (filter !== "ALL") params.set("serviceType", filter);
+      const res = await fetch(`/api/reviews/admin?${params.toString()}`);
+      const data = await res.json();
+      setReviews(data.reviews ?? []);
+    } catch {
+      setReviews([]);
+    } finally {
+      setReviewsLoading(false);
+    }
+  };
+
+  const handleReviewDelete = async (id: string, action: "DELETE" | "HIDE") => {
+    setReviewActionId(id);
+    try {
+      await fetch(`/api/reviews/${id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+      setReviews((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      alert("Erreur lors de l'action.");
+    } finally {
+      setReviewActionId(null);
+    }
+  };
+
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/");
@@ -175,15 +210,21 @@ const DashboardClient = () => {
             { id: "LISTINGS", name: "Annonces", icon: Car },
             { id: "LEADS", name: "Estimations", icon: FileText },
             { id: "RESERVATIONS", name: "Réservations", icon: Calendar },
+            { id: "REVIEWS", name: "Avis Clients", icon: Star },
           ].map((item) => (
             <button
               key={item.id}
-              onClick={() => setView(item.id as any)}
-              className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all ${view === item.id ? "bg-primary text-white" : "text-white/30 hover:bg-white/5 hover:text-white"
-                }`}
+              onClick={() => {
+                setView(item.id as any);
+                if (item.id === "REVIEWS") fetchReviews(reviewFilter);
+              }}
+              className={`w-full flex items-center gap-4 px-6 py-4 rounded-xl text-[10px] uppercase tracking-widest font-bold transition-all ${view === item.id ? "bg-primary text-white" : "text-white/30 hover:bg-white/5 hover:text-white"}`}
             >
               <item.icon size={16} />
               {item.name}
+              {item.id === "REVIEWS" && reviews.length > 0 && (
+                <span className="ml-auto bg-primary/20 text-primary text-[8px] px-2 py-0.5 rounded-full">{reviews.length}</span>
+              )}
             </button>
           ))}
         </nav>
@@ -205,7 +246,8 @@ const DashboardClient = () => {
             <h1 className="text-5xl font-display font-bold uppercase italic tracking-tighter">
               {view === "OVERVIEW" ? "VUE D'ENSEMBLE" :
                 view === "LISTINGS" ? "GESTION STOCK" :
-                  view === "LEADS" ? "ESTIMATIONS" : "RÉSERVATIONS LOC"}
+                  view === "LEADS" ? "ESTIMATIONS" :
+                    view === "RESERVATIONS" ? "RÉSERVATIONS LOC" : "AVIS CLIENTS"}
             </h1>
           </div>
           <button
@@ -217,6 +259,103 @@ const DashboardClient = () => {
         </header>
 
         {view === "OVERVIEW" && renderOverview()}
+
+        {view === "REVIEWS" && (
+          <div className="space-y-10">
+            {/* Filter Bar */}
+            <div className="flex flex-wrap items-center gap-3">
+              <Filter size={14} className="text-white/30" />
+              {(["ALL", "GLOBAL", "SALE", "RENT"] as const).map((type) => (
+                <button
+                  key={type}
+                  onClick={() => { setReviewFilter(type); fetchReviews(type); }}
+                  className={`px-5 py-2 rounded-full text-[9px] uppercase tracking-[0.4em] font-bold border transition-all duration-300 ${reviewFilter === type
+                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                    : "border-white/10 text-white/40 hover:border-white/30 hover:text-white"
+                    }`}
+                >
+                  {type === "ALL" ? "Tous" : type === "GLOBAL" ? "Général" : type === "SALE" ? "Achat" : "Location"}
+                </button>
+              ))}
+              <span className="ml-auto text-[9px] uppercase tracking-widest text-white/30 font-bold">{reviews.length} avis</span>
+            </div>
+
+            {reviewsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="glass p-8 rounded-2xl space-y-4 animate-pulse">
+                    <div className="flex gap-3"><div className="w-10 h-10 rounded-xl bg-white/5"></div><div className="flex-1 space-y-2"><div className="h-3 bg-white/5 rounded w-1/2"></div><div className="h-2 bg-white/5 rounded w-1/3"></div></div></div>
+                    <div className="space-y-2"><div className="h-2 bg-white/5 rounded w-full"></div><div className="h-2 bg-white/5 rounded w-4/5"></div></div>
+                  </div>
+                ))}
+              </div>
+            ) : reviews.length === 0 ? (
+              <div className="text-center py-24 space-y-4">
+                <Star size={40} className="text-white/10 mx-auto" />
+                <p className="text-white/30 text-[10px] uppercase tracking-[0.5em] font-bold">Aucun avis trouvé</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+                {reviews.map((review) => {
+                  const SERVICE_COLORS: Record<string, string> = {
+                    GLOBAL: "text-blue-400 bg-blue-400/10 border-blue-400/20",
+                    SALE: "text-primary bg-primary/10 border-primary/20",
+                    RENT: "text-green-400 bg-green-400/10 border-green-400/20",
+                  };
+                  const SERVICE_LABELS: Record<string, string> = { GLOBAL: "Général", SALE: "Achat", RENT: "Location" };
+                  const seconds = review.createdAt?.seconds ?? review.createdAt?._seconds;
+                  const dateStr = seconds
+                    ? new Date(seconds * 1000).toLocaleDateString("fr-FR")
+                    : "—";
+                  return (
+                    <div key={review.id} className={`glass p-8 rounded-2xl space-y-5 transition-all duration-300 border ${review.status === "HIDDEN" ? "opacity-40 border-white/5" : "border-white/10 hover:border-white/20"}`}>
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-sm font-bold uppercase">{review.name.charAt(0)}</div>
+                          <div>
+                            <p className="text-xs font-bold tracking-widest">{review.name}</p>
+                            <div className="flex gap-0.5 mt-1">
+                              {[1, 2, 3, 4, 5].map(s => <Star key={s} size={10} className={s <= review.rating ? "fill-primary text-primary" : "text-white/10"} />)}
+                            </div>
+                          </div>
+                        </div>
+                        <span className={`text-[8px] uppercase tracking-[0.3em] font-bold px-2 py-1 rounded-full border ${SERVICE_COLORS[review.serviceType]}`}>
+                          {SERVICE_LABELS[review.serviceType]}
+                        </span>
+                      </div>
+
+                      <p className="text-white/50 text-xs leading-relaxed line-clamp-4">{review.comment}</p>
+
+                      {review.email && <p className="text-[10px] text-white/30 tracking-widest">{review.email}</p>}
+
+                      <div className="flex items-center justify-between pt-3 border-t border-white/5">
+                        <span className="text-[9px] text-white/20 uppercase tracking-widest font-bold">{dateStr}</span>
+                        <div className="flex gap-2">
+                          <button
+                            disabled={reviewActionId === review.id}
+                            onClick={() => handleReviewDelete(review.id, "HIDE")}
+                            className="w-9 h-9 rounded-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 transition-all"
+                            title="Masquer"
+                          >
+                            <EyeOff size={14} />
+                          </button>
+                          <button
+                            disabled={reviewActionId === review.id}
+                            onClick={() => handleReviewDelete(review.id, "DELETE")}
+                            className="w-9 h-9 rounded-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-red-400 hover:border-red-400/30 transition-all"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {view === "LISTINGS" && (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">

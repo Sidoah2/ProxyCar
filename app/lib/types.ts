@@ -77,3 +77,19 @@ export interface Reservation {
   alternativeEndDate?: { seconds: number } | null;
   createdAt: { seconds: number };
 }
+
+export type ServiceType = "RENT" | "SALE" | "GLOBAL";
+export type ReviewStatus = "VISIBLE" | "HIDDEN";
+
+export interface Review {
+  id: string;
+  name: string;
+  phone?: string;
+  email?: string;
+  rating: number;
+  comment: string;
+  serviceType: ServiceType;
+  relatedId?: string;
+  status: ReviewStatus;
+  createdAt: any;
+}

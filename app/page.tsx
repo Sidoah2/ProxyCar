@@ -8,6 +8,7 @@ import Vehicles from './components/Vehicles';
 import Features from './components/Features';
 import Contact from './components/Contact';
 import Footer from './components/Footer';
+import ReviewsSection from './components/Reviews/ReviewsSection';
 import Link from 'next/link';
 import { ArrowRight } from 'lucide-react';
 
@@ -68,6 +69,7 @@ export default function Home() {
       </section>
 
       <Features />
+      <ReviewsSection />
       <Contact />
       <Footer />
 
