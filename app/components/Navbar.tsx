@@ -28,8 +28,8 @@ const Navbar = () => {
 
   const navLinks = [
     { label: 'Accueil', href: '/' },
-    { label: 'Marketplace', href: '/marketplace' },
-    { label: 'Estimation', href: '/estimation' },
+    { label: 'Acheter une voiture', href: '/marketplace' },
+    { label: 'vendre mon vehicule', href: '/estimation' },
     { label: 'Contact', href: '/#contact' }
   ];
 

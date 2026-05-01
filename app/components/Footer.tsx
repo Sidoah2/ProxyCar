@@ -42,8 +42,8 @@ const Footer = () => {
             <ul className="space-y-4">
               {[
                 { label: 'Accueil', href: '/', onClick: scrollToTop },
-                { label: 'Marketplace', href: '/marketplace' },
-                { label: 'Estimation', href: '/estimation' },
+                { label: 'Acheter une voiture', href: '/marketplace' },
+                { label: 'vendre mon vehicule', href: '/estimation' },
                 { label: 'Contact', href: '/#contact' }
               ].map((item) => (
                 <li key={item.label}>

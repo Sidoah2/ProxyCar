@@ -13,21 +13,21 @@ if (typeof window !== 'undefined') {
 const staticCars = [
   {
     id: 's1',
-    name: 'Concept Sport',
+    name: 'Arrivage recents',
     brand: 'Proxy',
     image: '/images/golf.png', // Using existing realistic images for now but as static
     tag: 'Design Focus'
   },
   {
     id: 's2',
-    name: 'Urban Compact',
+    name: 'Nos occasion',
     brand: 'Proxy',
     image: '/images/clio.png',
     tag: 'Modern Life'
   },
   {
     id: 's3',
-    name: 'Future Vision',
+    name: 'Vehicules disponible',
     brand: 'Proxy',
     image: '/images/p208.png',
     tag: 'Innovation'

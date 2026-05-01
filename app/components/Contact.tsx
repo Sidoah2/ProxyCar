@@ -77,9 +77,9 @@ const Contact = () => {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               {[
-                { icon: Mail, label: 'Email Direct', value: 'proxycars57@outlook.fr', href: 'mailto:proxycars57@outlook.fr' },
-                { icon: Phone, label: 'Conciergerie', value: '07 59 54 92 77', href: 'tel:0759549277' },
-                { icon: MapPin, label: 'Showroom Privé', value: '24 rue du Moulin, Florange', href: '#' }
+                { icon: Mail, label: 'Email', value: 'proxycars57@outlook.fr', href: 'mailto:proxycars57@outlook.fr' },
+                { icon: Phone, label: 'téléphone', value: '07 59 54 92 77', href: 'tel:0759549277' },
+                { icon: MapPin, label: 'adresse', value: '24 rue du Moulin, Florange', href: '#' }
               ].map((item, idx) => (
                 <a
                   key={idx}
@@ -151,7 +151,7 @@ const Contact = () => {
                   </div>
                   <select className="w-full bg-white/[0.02] border border-white/5 rounded-2xl py-5 px-6 outline-none focus:border-primary/50 transition-all text-white text-xs appearance-none cursor-pointer">
                     <option className="bg-[#111]">Achat d&apos;un véhicule de prestige</option>
-                    <option className="bg-[#111]">Service de reprise / Estimation</option>
+                    <option className="bg-[#111]">Service de reprise / vendre mon vehicule</option>
                     <option className="bg-[#111]">Demande de conciergerie VIP</option>
                     <option className="bg-[#111]">Autres informations</option>
                   </select>

@@ -29,7 +29,7 @@ export default function Home() {
             <div className="space-y-6 md:max-w-2xl text-center md:text-left">
               <span className="text-primary font-bold uppercase tracking-[0.5em] text-[10px]">Vendez votre véhicule</span>
               <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-display font-bold uppercase tracking-tighter leading-none italic">
-                OBTENEZ UNE <br /> <span className="text-white/20">ESTIMATION EN 24H</span>
+                VENDRE MON <br /> <span className="text-white/20">VÉHICULE EN 24H</span>
               </h2>
               <p className="text-white/40 text-sm uppercase tracking-widest leading-relaxed">
                 Notre service d&apos;expertise analyse votre véhicule pour vous proposer le meilleur prix du marché. Simple, rapide et sans engagement.
@@ -39,7 +39,7 @@ export default function Home() {
               href="/estimation"
               className="px-12 py-6 bg-white text-black font-bold uppercase tracking-[0.4em] text-[10px] rounded-xl hover:bg-primary hover:text-white transition-all duration-500 flex items-center gap-4 group/btn"
             >
-              Démarrer l&apos;estimation
+              Vendre mon véhicule
               <ArrowRight size={14} className="group-hover/btn:translate-x-2 transition-transform" />
             </Link>
           </div>
@@ -53,7 +53,7 @@ export default function Home() {
             <div className="space-y-6 md:max-w-2xl text-center md:text-left">
               <span className="text-primary font-bold uppercase tracking-[0.5em] text-[10px]">Parcourez nos offres</span>
               <h2 className="text-[clamp(2.5rem,5vw,5rem)] font-display font-bold uppercase tracking-tighter leading-none italic">
-                DÉCOUVREZ NOTRE <br /> <span className="text-white/20">MARKETPLACE</span>
+                ACHETER UNE <br /> <span className="text-white/20">VOITURE</span>
               </h2>
               <p className="text-white/40 text-sm uppercase tracking-widest leading-relaxed">
                 Accédez à une large sélection de véhicules révisés, certifiés et prêts à rouler dès aujourd&apos;hui.
