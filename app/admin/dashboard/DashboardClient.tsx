@@ -393,8 +393,8 @@ const DashboardClient = () => {
                             disabled={reviewActionId === review.id}
                             onClick={() => handleReviewAction(review.id, "TOGGLE_VISIBILITY", review.status)}
                             className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${review.status === "HIDDEN"
-                                ? "text-green-400 border-green-400/20 hover:bg-green-400/10"
-                                : "text-white/40 border-white/10 hover:text-yellow-400 hover:border-yellow-400/30"
+                              ? "text-green-400 border-green-400/20 hover:bg-green-400/10"
+                              : "text-white/40 border-white/10 hover:text-yellow-400 hover:border-yellow-400/30"
                               }`}
                             title={review.status === "HIDDEN" ? "Afficher" : "Masquer"}
                           >
