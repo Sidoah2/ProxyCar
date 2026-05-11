@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect } from "react";
 import { DayPicker, DateRange } from "react-day-picker";
-import { format, isWithinInterval, addDays, startOfDay } from "date-fns";
+import { format, isWithinInterval, startOfDay } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Calendar as CalendarIcon, MapPin, User, Phone, Mail, CheckCircle2, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, MapPin, User, Phone, Mail, CheckCircle2 } from "lucide-react";
 import "react-day-picker/style.css";
+import { collection, query, where, getDocs, addDoc, serverTimestamp, Timestamp } from "firebase/firestore";
+import { db } from "@/app/lib/firebase";
 
 interface BookingFormProps {
   rentalId: string;
@@ -27,22 +29,29 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
   const [alternative, setAlternative] = useState<{ start: string; end: string } | null>(null);
 
   const handleSelect = (newRange: DateRange | undefined) => {
-    // If we just selected a complete range, auto-advance to step 2 after a tiny delay
     setRange(newRange);
     if (newRange?.from && newRange?.to) {
       setTimeout(() => setStep(2), 300);
     }
   };
 
-  // Fetch availability
   useEffect(() => {
     const fetchAvailability = async () => {
       try {
-        const res = await fetch(`/api/reservations/availability?rentalId=${rentalId}`);
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setBookedRanges(data.map(r => ({ from: new Date(r.from), to: new Date(r.to) })));
-        }
+        const q = query(
+          collection(db, "reservations"),
+          where("rentalId", "==", rentalId),
+          where("status", "in", ["PENDING", "CONFIRMED", "CONTACTED"])
+        );
+        const snap = await getDocs(q);
+        const ranges = snap.docs.map(doc => {
+          const data = doc.data();
+          return {
+            from: data.startDate.toDate(),
+            to: data.endDate.toDate(),
+          };
+        });
+        setBookedRanges(ranges);
       } catch (err) {
         console.error("Availability fetch failed", err);
       }
@@ -61,33 +70,72 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
     setStatus("IDLE");
 
     try {
-      const res = await fetch("/api/reservations/create", {
-        method: "POST",
-        body: JSON.stringify({
-          rentalId,
-          carDetails,
-          ...formData,
-          startDate: range.from,
-          endDate: range.to,
-        }),
+      const startTs = range.from;
+      const endTs = range.to;
+
+      // 1. Conflict Detection
+      const q = query(
+        collection(db, "reservations"),
+        where("rentalId", "==", rentalId),
+        where("status", "in", ["PENDING", "CONFIRMED", "CONTACTED"])
+      );
+      const existingSnap = await getDocs(q);
+      const existingBookings = existingSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any[];
+
+      let hasConflict = false;
+      for (const booking of existingBookings) {
+        const bStart = booking.startDate.toDate();
+        const bEnd = booking.endDate.toDate();
+
+        if (startTs <= bEnd && endTs >= bStart) {
+          hasConflict = true;
+          break;
+        }
+      }
+
+      // 2. Handle Conflict & Generate Alternatives
+      let alternativeStart = null;
+      let alternativeEnd = null;
+
+      if (hasConflict) {
+        const sortedBookings = [...existingBookings].sort((a, b) => a.endDate.seconds - b.endDate.seconds);
+        const lastBooking = sortedBookings[sortedBookings.length - 1];
+        
+        const duration = endTs.getTime() - startTs.getTime();
+        const nextAvailable = lastBooking ? new Date(lastBooking.endDate.toDate().getTime() + 86400000) : new Date();
+        
+        alternativeStart = nextAvailable;
+        alternativeEnd = new Date(nextAvailable.getTime() + duration);
+      }
+
+      // 3. Save Reservation
+      await addDoc(collection(db, "reservations"), {
+        rentalId,
+        carDetails,
+        ...formData,
+        startDate: Timestamp.fromDate(startTs),
+        endDate: Timestamp.fromDate(endTs),
+        status: hasConflict ? "PENDING_CONFLICT" : "PENDING",
+        conflict: hasConflict,
+        alternativeStartDate: alternativeStart ? Timestamp.fromDate(alternativeStart) : null,
+        alternativeEndDate: alternativeEnd ? Timestamp.fromDate(alternativeEnd) : null,
+        createdAt: serverTimestamp(),
       });
 
-      const data = await res.json();
-
-      if (data.success) {
-        if (data.conflict) {
-          setStatus("CONFLICT");
-          setAlternative({
-            start: format(new Date(data.alternative.start), "dd MMMM yyyy", { locale: fr }),
-            end: format(new Date(data.alternative.end), "dd MMMM yyyy", { locale: fr }),
-          });
-        } else {
-          setStatus("SUCCESS");
-        }
+      if (hasConflict) {
+        setStatus("CONFLICT");
+        setAlternative({
+          start: format(alternativeStart!, "dd MMMM yyyy", { locale: fr }),
+          end: format(alternativeEnd!, "dd MMMM yyyy", { locale: fr }),
+        });
       } else {
-        setStatus("ERROR");
+        setStatus("SUCCESS");
       }
     } catch (err) {
+      console.error("Reservation Error:", err);
       setStatus("ERROR");
     } finally {
       setLoading(false);
@@ -119,7 +167,7 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="glass p-8 md:p-12 rounded-[2rem] border border-white/5 space-y-8 max-w-xl mx-auto">
+    <form onSubmit={handleSubmit} className="glass p-8 md:p-12 rounded-[2rem] border border-white/5 space-y-8 max-w-xl mx-auto text-left">
       <div className="flex justify-between items-end">
         <div className="space-y-1">
           <h2 className="text-2xl font-display font-bold uppercase italic tracking-widest">Réserver</h2>
@@ -138,9 +186,7 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
 
       {step === 1 ? (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Modern Date Display */}
           <div className="grid grid-cols-2 gap-4 relative">
-            {/* Start Date */}
             <div className="glass p-6 rounded-2xl border border-white/5 flex items-center justify-between group transition-all hover:border-primary/20">
               <div className="space-y-1 text-left">
                 <span className="text-[7px] uppercase tracking-[0.4em] text-white/20 font-bold block">Départ</span>
@@ -153,7 +199,6 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
               </span>
             </div>
 
-            {/* End Date */}
             <div className="glass p-6 rounded-2xl border border-white/5 flex items-center justify-between group transition-all hover:border-white/20">
               <div className="space-y-1 text-left">
                 <span className="text-[7px] uppercase tracking-[0.4em] text-white/20 font-bold block">Retour</span>
@@ -207,7 +252,6 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
         </div>
       ) : (
         <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
-          {/* Booking Summary */}
           <div className="glass p-5 rounded-2xl border border-white/5 flex items-center justify-between bg-primary/5">
             <div className="flex items-center gap-6">
               <div className="space-y-0.5">
@@ -274,6 +318,15 @@ const BookingForm = ({ rentalId, carDetails }: BookingFormProps) => {
               />
             </div>
           </div>
+
+          {status === "CONFLICT" && alternative && (
+            <div className="p-6 bg-red-500/5 border border-red-500/20 rounded-2xl space-y-3 animate-in slide-in-from-top-2">
+              <p className="text-[9px] font-bold text-red-500 uppercase tracking-widest">Dates indisponibles</p>
+              <p className="text-xs text-white/60">
+                Véhicule disponible du <span className="text-white font-bold">{alternative.start}</span> au <span className="text-white font-bold">{alternative.end}</span>. Nous avons tout de même enregistré votre demande.
+              </p>
+            </div>
+          )}
 
           <button
             type="submit"

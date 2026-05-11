@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/app/lib/firebase';
 import { Star, Send, CheckCircle, User, Mail, ChevronRight, MessageCircle } from 'lucide-react';
 import { ServiceType } from '@/app/lib/types';
 
@@ -76,23 +78,22 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
 
     setLoading(true);
     try {
-      const res = await fetch('/api/reviews/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, rating, comment, serviceType, relatedId }),
+      await addDoc(collection(db, 'reviews'), {
+        name,
+        email,
+        rating,
+        comment,
+        serviceType,
+        relatedId: relatedId || null,
+        status: 'NEW', // New reviews need approval
+        createdAt: serverTimestamp(),
       });
-
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("Submission error detail:", data);
-        setErrors(data.errors ?? [data.error ?? 'Erreur inconnue.']);
-        return;
-      }
 
       setSuccess(true);
       setName(''); setEmail(''); setRating(0); setComment('');
       onSuccess?.();
-    } catch {
+    } catch (error) {
+      console.error("Submission error:", error);
       setErrors(['Une erreur est survenue. Veuillez réessayer.']);
     } finally {
       setLoading(false);
@@ -123,7 +124,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
 
   return (
     <form onSubmit={handleSubmit} className="space-y-10">
-      {/* Service Type Selector */}
       <div className="space-y-4">
         <p className="text-[9px] uppercase tracking-[0.4em] text-white/30 font-bold flex items-center gap-2">
           <ChevronRight size={10} className="text-primary" /> Service concerné
@@ -149,7 +149,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         </div>
       </div>
 
-      {/* Star Rating */}
       <div className="space-y-4">
         <p className="text-[9px] uppercase tracking-[0.4em] text-white/30 font-bold flex items-center gap-2">
           <Star size={10} className="text-primary" /> Votre note
@@ -164,7 +163,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         </div>
       </div>
 
-      {/* Name + Email */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-3 group/input">
           <div className="flex items-center gap-2 text-white/40 group-focus-within/input:text-primary transition-colors">
@@ -195,7 +193,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         </div>
       </div>
 
-      {/* Comment */}
       <div className="space-y-3 group/input">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-white/40 group-focus-within/input:text-primary transition-colors">
@@ -216,7 +213,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         />
       </div>
 
-      {/* Errors */}
       {errors.length > 0 && (
         <div className="p-5 rounded-2xl bg-primary/5 border border-primary/20 space-y-2 animate-in fade-in duration-300">
           {errors.map((err, i) => (
@@ -225,7 +221,6 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         </div>
       )}
 
-      {/* Submit */}
       <button
         type="submit"
         disabled={loading}

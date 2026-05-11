@@ -1,8 +1,10 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { collection, query, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { db } from "@/app/lib/firebase";
+import { collection, query, orderBy, getDocs, addDoc, serverTimestamp, where, updateDoc, deleteDoc, doc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { db, storage, auth } from "@/app/lib/firebase";
 import { Lead, Listing, Reservation, Review, ServiceType } from "@/app/lib/types";
 import { LayoutDashboard, Car, FileText, LogOut, ChevronRight, Calendar, ExternalLink, MessageCircle, Mail, User, MapPin, Phone, Star, Trash2, EyeOff, Filter, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -29,6 +31,8 @@ const DashboardClient = () => {
     details: "",
     notes: ""
   });
+  const [editingListing, setEditingListing] = useState<Listing | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
   const router = useRouter();
 
   const handleAddListing = async () => {
@@ -39,16 +43,9 @@ const DashboardClient = () => {
 
     setPublishing(true);
     try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const uploadRes = await fetch("/api/admin/upload", {
-        method: "POST",
-        body: formData
-      });
-
-      const uploadData = await uploadRes.json();
-      if (!uploadRes.ok) throw new Error("Upload failed");
+      const storageRef = ref(storage, `listings/${Date.now()}_${selectedFile.name}`);
+      await uploadBytes(storageRef, selectedFile);
+      const downloadURL = await getDownloadURL(storageRef);
 
       await addDoc(collection(db, "listings"), {
         description: newCar.description,
@@ -56,7 +53,7 @@ const DashboardClient = () => {
         type: newCar.type,
         details: newCar.details,
         notes: newCar.notes,
-        mainImage: uploadData.secure_url,
+        mainImage: downloadURL,
         status: "APPROVED",
         createdAt: serverTimestamp()
       });
@@ -79,7 +76,16 @@ const DashboardClient = () => {
   };
 
   useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        router.push("/admin/login");
+      } else {
+        fetchData();
+      }
+    });
+
     const fetchData = async () => {
+      setLoading(true);
       try {
         const leadsQuery = query(collection(db, "estimations"), orderBy("createdAt", "desc"));
         const listingsQuery = query(collection(db, "listings"), orderBy("createdAt", "desc"));
@@ -101,18 +107,20 @@ const DashboardClient = () => {
       }
     };
 
-    fetchData();
-  }, []);
+    return () => unsubscribe();
+  }, [router]);
 
   const fetchReviews = async (filter: ServiceType | "ALL" = "ALL") => {
     setReviewsLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (filter !== "ALL") params.set("serviceType", filter);
-      const res = await fetch(`/api/reviews/admin?${params.toString()}`);
-      const data = await res.json();
-      setReviews(data.reviews ?? []);
-    } catch {
+      let reviewsQuery = query(collection(db, "reviews"), orderBy("createdAt", "desc"));
+      if (filter !== "ALL") {
+        reviewsQuery = query(collection(db, "reviews"), where("serviceType", "==", filter), orderBy("createdAt", "desc"));
+      }
+      const reviewsSnap = await getDocs(reviewsQuery);
+      setReviews(reviewsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review)));
+    } catch (error) {
+      console.error("Fetch Reviews Error:", error);
       setReviews([]);
     } finally {
       setReviewsLoading(false);
@@ -122,21 +130,68 @@ const DashboardClient = () => {
   const handleReviewDelete = async (id: string, action: "DELETE" | "HIDE") => {
     setReviewActionId(id);
     try {
-      await fetch(`/api/reviews/${id}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action }),
-      });
+      if (action === "DELETE") {
+        await deleteDoc(doc(db, "reviews", id));
+      } else {
+        await updateDoc(doc(db, "reviews", id), { status: "HIDDEN" });
+      }
       setReviews((prev) => prev.filter((r) => r.id !== id));
-    } catch {
+    } catch (error) {
+      console.error("Review Action Error:", error);
       alert("Erreur lors de l'action.");
     } finally {
       setReviewActionId(null);
     }
   };
 
+  const handleDeleteListing = async (id: string) => {
+    if (!confirm("Voulez-vous vraiment supprimer cette annonce ?")) return;
+    try {
+      await deleteDoc(doc(db, "listings", id));
+      setListings(prev => prev.filter(l => l.id !== id));
+    } catch (error) {
+      console.error("Delete Error:", error);
+      alert("Erreur lors de la suppression.");
+    }
+  };
+
+  const handleUpdateListing = async () => {
+    if (!editingListing) return;
+    setPublishing(true);
+    try {
+      const listingRef = doc(db, "listings", editingListing.id);
+      let mainImage = editingListing.mainImage;
+
+      if (selectedFile) {
+        const storageRef = ref(storage, `listings/${Date.now()}_${selectedFile.name}`);
+        await uploadBytes(storageRef, selectedFile);
+        mainImage = await getDownloadURL(storageRef);
+      }
+
+      await updateDoc(listingRef, {
+        description: editingListing.description,
+        price: Number(editingListing.price),
+        type: editingListing.type,
+        details: editingListing.details || "",
+        notes: editingListing.notes || "",
+        mainImage: mainImage,
+      });
+
+      // Update local state
+      setListings(prev => prev.map(l => l.id === editingListing.id ? { ...editingListing, mainImage } as Listing : l));
+      setShowEditModal(false);
+      setEditingListing(null);
+      setSelectedFile(null);
+    } catch (error) {
+      console.error("Update Error:", error);
+      alert("Erreur lors de la mise à jour.");
+    } finally {
+      setPublishing(false);
+    }
+  };
+
   const handleLogout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" });
+    await signOut(auth);
     router.push("/");
   };
 
@@ -199,7 +254,7 @@ const DashboardClient = () => {
       <aside className="w-80 border-r border-white/5 p-10 flex flex-col gap-16 sticky top-0 h-screen">
         <div className="flex flex-col group">
           <span className="text-2xl font-display tracking-tighter text-white leading-none uppercase italic font-bold">
-            PROXY<span className="text-primary">ADMIN</span>
+            AUTO<span className="text-primary">ELITE</span>
           </span>
           <span className="text-[8px] uppercase tracking-[0.5em] text-white/20 font-bold mt-1">Management Portal</span>
         </div>
@@ -373,9 +428,20 @@ const DashboardClient = () => {
                     <span className="text-[8px] bg-white/5 px-2 py-1 rounded uppercase">{listing.type}</span>
                   </div>
                   <div className="flex gap-4 pt-4">
-                    <button className="flex-grow py-3 border border-white/10 rounded-lg text-[9px] uppercase font-bold tracking-widest hover:bg-white/5">Modifier</button>
-                    <button className="px-4 py-3 border border-red-500/20 rounded-lg text-red-500 hover:bg-red-500/10 transition-colors">
-                      <LogOut size={14} className="rotate-90" />
+                    <button
+                      onClick={() => {
+                        setEditingListing(listing);
+                        setShowEditModal(true);
+                      }}
+                      className="flex-grow py-3 border border-white/10 rounded-lg text-[9px] uppercase font-bold tracking-widest hover:bg-white/5 transition-all"
+                    >
+                      Modifier
+                    </button>
+                    <button
+                      onClick={() => handleDeleteListing(listing.id)}
+                      className="px-4 py-3 border border-red-500/20 rounded-lg text-red-500 hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 size={14} />
                     </button>
                   </div>
                 </div>
@@ -585,6 +651,102 @@ const DashboardClient = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Listing Modal */}
+      {showEditModal && editingListing && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+          <div className="absolute inset-0 bg-black/90 backdrop-blur-xl" onClick={() => { setShowEditModal(false); setEditingListing(null); }}></div>
+          <div className="relative glass w-full max-w-2xl p-8 md:p-12 rounded-[2rem] border border-white/10 flex flex-col max-h-[90vh]">
+            <h2 className="text-3xl font-display font-bold uppercase italic tracking-widest mb-10 shrink-0">Modifier l'Annonce</h2>
+
+            <div className="flex-grow overflow-y-auto pr-4 custom-scrollbar space-y-10">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Marque & Modèle</label>
+                  <input
+                    value={editingListing.description}
+                    onChange={(e) => setEditingListing({ ...editingListing, description: e.target.value })}
+                    placeholder="Ex: Mercedes Classe G"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 outline-none focus:border-primary transition-all text-white text-sm placeholder:text-white/20"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Prix (€)</label>
+                  <input
+                    value={editingListing.price}
+                    onChange={(e) => setEditingListing({ ...editingListing, price: Number(e.target.value) })}
+                    placeholder="Ex: 85000"
+                    type="number"
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 outline-none focus:border-primary transition-all text-white text-sm placeholder:text-white/20"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Type</label>
+                  <select
+                    value={editingListing.type}
+                    onChange={(e) => setEditingListing({ ...editingListing, type: e.target.value as any })}
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 outline-none focus:border-primary transition-all text-white text-sm appearance-none cursor-pointer"
+                  >
+                    <option value="SALE" className="bg-[#111] text-white">Vente</option>
+                    <option value="RENT" className="bg-[#111] text-white">Location</option>
+                    <option value="DAMAGED" className="bg-[#111] text-white">Accidenté</option>
+                  </select>
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Changer la photo (Optionnel)</label>
+                  <div className="flex items-center gap-4">
+                    <label className="flex-grow flex items-center justify-center border-2 border-dashed border-white/10 rounded-xl py-4 px-6 cursor-pointer hover:border-primary transition-all">
+                      <span className="text-[10px] uppercase font-bold tracking-widest text-white/40">
+                        {selectedFile ? selectedFile.name : "Sélectionner un nouveau fichier"}
+                      </span>
+                      <input type="file" className="hidden" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} accept="image/*" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Optional Fields Section */}
+              <div className="space-y-6 pt-10 border-t border-white/5">
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Description Détaillée (Optionnel)</label>
+                  <textarea
+                    value={editingListing.details || ""}
+                    onChange={(e) => setEditingListing({ ...editingListing, details: e.target.value })}
+                    placeholder="Équipements, historique, état du véhicule..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 outline-none focus:border-primary transition-all text-white text-sm min-h-[120px] resize-none placeholder:text-white/20"
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-[9px] uppercase tracking-widest text-white/40 font-bold ml-1">Notes Internes (Privé)</label>
+                  <textarea
+                    value={editingListing.notes || ""}
+                    onChange={(e) => setEditingListing({ ...editingListing, notes: e.target.value })}
+                    placeholder="Infos pour l'équipe admin..."
+                    className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-6 outline-none focus:border-primary transition-all text-white text-sm min-h-[80px] resize-none placeholder:text-white/20"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-4 pt-10 shrink-0 border-t border-white/5">
+              <button
+                onClick={handleUpdateListing}
+                disabled={publishing}
+                className="flex-grow py-5 bg-white text-black font-bold uppercase tracking-[0.3em] text-[10px] rounded-xl hover:bg-primary hover:text-white transition-all disabled:opacity-50"
+              >
+                {publishing ? "Mise à jour..." : "Enregistrer les modifications"}
+              </button>
+              <button
+                onClick={() => { setShowEditModal(false); setEditingListing(null); setSelectedFile(null); }}
+                className="px-10 py-5 border border-white/10 text-white/40 font-bold uppercase tracking-[0.3em] text-[10px] rounded-xl hover:bg-white/5"
+              >
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Estimation Details Modal */}
       {selectedLead && (
         <div className="fixed inset-0 z-[300] flex items-center justify-center p-6">

@@ -19,7 +19,7 @@ const Footer = () => {
       {/* Decorative Text */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full text-center pointer-events-none opacity-[0.02] select-none">
         <span className="text-[20vw] font-display font-bold uppercase tracking-tighter leading-none translate-y-1/2 block">
-          PROXY CAR
+          AUTO ELITE
         </span>
       </div>
 
@@ -28,7 +28,7 @@ const Footer = () => {
           <div className="space-y-6 md:space-y-8">
             <Link href="/" onClick={scrollToTop} className="flex flex-col group">
               <span className="text-3xl font-display tracking-tighter text-white leading-none uppercase italic font-bold">
-                PROXY<span className="text-primary">CAR</span>
+                AUTO<span className="text-primary">ELITE</span>
               </span>
               <span className="text-[8px] uppercase tracking-[0.5em] text-white/30 font-bold mt-1">Achat & Location</span>
             </Link>
@@ -114,7 +114,7 @@ const Footer = () => {
           </div>
 
           <p className="text-white/20 text-[10px] uppercase tracking-[0.3em] font-bold">
-            &copy; {currentYear} PROXY CAR. Design by <span className="text-white/40">Modern Studio</span>
+            &copy; {currentYear} AUTOELITE. Design by <span className="text-white/40">Modern Studio</span>
           </p>
         </div>
       </div>

@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { Star, Quote, Calendar } from 'lucide-react';
 import { Review, ServiceType } from '@/app/lib/types';
+import { collection, query, where, getDocs, orderBy, limit as firestoreLimit } from 'firebase/firestore';
+import { db } from '@/app/lib/firebase';
 
 interface ReviewsListProps {
   serviceType?: ServiceType;
@@ -38,11 +40,8 @@ function StarDisplay({ rating }: { rating: number }) {
 
 function formatDate(createdAt: any): string {
   if (!createdAt) return '';
-
   try {
-    // Handle Firestore Timestamp (both client-side .seconds and server-side ._seconds)
     const seconds = createdAt?.seconds ?? createdAt?._seconds;
-    
     if (seconds !== undefined) {
       return new Date(seconds * 1000).toLocaleDateString('fr-FR', {
         day: 'numeric',
@@ -50,11 +49,8 @@ function formatDate(createdAt: any): string {
         year: 'numeric',
       });
     }
-
-    // Handle Date object or ISO string
     const date = new Date(createdAt);
     if (isNaN(date.getTime())) return '';
-
     return date.toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
@@ -71,7 +67,6 @@ function ReviewCard({ review, index }: { review: Review; index: number }) {
       className="glass p-8 rounded-3xl space-y-6 hover:border-white/15 transition-all duration-500 group animate-in fade-in slide-in-from-bottom-4"
       style={{ animationDelay: `${index * 100}ms`, animationFillMode: 'both' }}
     >
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-white font-bold text-lg uppercase">
@@ -86,14 +81,8 @@ function ReviewCard({ review, index }: { review: Review; index: number }) {
           {SERVICE_LABELS[review.serviceType]}
         </span>
       </div>
-
-      {/* Quote Icon */}
       <Quote size={20} className="text-primary/30" />
-
-      {/* Comment */}
       <p className="text-white/50 text-sm leading-relaxed">{review.comment}</p>
-
-      {/* Footer */}
       <div className="flex items-center gap-2 text-white/20 pt-2 border-t border-white/5">
         <Calendar size={12} />
         <span className="text-[9px] uppercase tracking-[0.3em] font-bold">{formatDate(review.createdAt)}</span>
@@ -106,7 +95,6 @@ function AverageRating({ reviews }: { reviews: Review[] }) {
   if (reviews.length === 0) return null;
   const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
   const rounded = Math.round(avg * 10) / 10;
-
   return (
     <div className="flex flex-col items-center gap-4 glass p-10 rounded-3xl text-center">
       <p className="text-[9px] uppercase tracking-[0.5em] text-white/30 font-bold">Note Globale</p>
@@ -126,13 +114,36 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
     const fetchReviews = async () => {
       setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (filter !== 'ALL') params.set('serviceType', filter);
-        if (relatedId) params.set('relatedId', relatedId);
+        let q = query(
+          collection(db, 'reviews'),
+          where('status', '==', 'APPROVED'),
+          orderBy('createdAt', 'desc'),
+          firestoreLimit(limit)
+        );
 
-        const res = await fetch(`/api/reviews?${params.toString()}`);
-        const data = await res.json();
-        setReviews(data.reviews ?? []);
+        if (filter !== 'ALL') {
+          q = query(
+            collection(db, 'reviews'),
+            where('status', '==', 'APPROVED'),
+            where('serviceType', '==', filter),
+            orderBy('createdAt', 'desc'),
+            firestoreLimit(limit)
+          );
+        }
+
+        if (relatedId) {
+          q = query(
+            collection(db, 'reviews'),
+            where('status', '==', 'APPROVED'),
+            where('relatedId', '==', relatedId),
+            orderBy('createdAt', 'desc'),
+            firestoreLimit(limit)
+          );
+        }
+
+        const querySnapshot = await getDocs(q);
+        const fetchedReviews = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Review));
+        setReviews(fetchedReviews);
       } catch (error) {
         console.error("Error fetching reviews:", error);
         setReviews([]);
@@ -141,13 +152,10 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
       }
     };
     fetchReviews();
-  }, [filter, relatedId]);
-
-  const displayed = reviews.slice(0, limit);
+  }, [filter, relatedId, limit]);
 
   return (
     <div className="space-y-12">
-      {/* Filter Bar */}
       {!serviceType && (
         <div className="flex flex-wrap gap-3">
           {(['ALL', 'GLOBAL', 'SALE', 'RENT'] as const).map((type) => (
@@ -185,7 +193,7 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
             </div>
           ))}
         </div>
-      ) : displayed.length === 0 ? (
+      ) : reviews.length === 0 ? (
         <div className="text-center py-20 space-y-4">
           <Star size={40} className="text-white/10 mx-auto" />
           <p className="text-white/30 text-[10px] uppercase tracking-[0.5em] font-bold">
@@ -195,8 +203,8 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {displayed.length >= 3 && <AverageRating reviews={reviews} />}
-          {displayed.map((review, i) => (
+          {reviews.length >= 3 && <AverageRating reviews={reviews} />}
+          {reviews.map((review, i) => (
             <ReviewCard key={review.id} review={review} index={i} />
           ))}
         </div>

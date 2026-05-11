@@ -45,12 +45,10 @@ const Navbar = () => {
               <div className="absolute inset-0 bg-red-gradient rounded-xl transform group-hover:rotate-[15deg] group-hover:scale-110 transition-all duration-500 shadow-lg shadow-primary/20"></div>
               <span className="relative z-10 text-white font-display text-xl md:text-2xl font-bold">P</span>
             </div>
-            <div className="flex flex-col">
               <span className="text-xl md:text-2xl font-display tracking-tighter text-white leading-none uppercase italic font-bold">
-                PROXY<span className="text-primary">CAR</span>
+                AUTO<span className="text-primary">ELITE</span>
               </span>
               <span className="text-[7px] md:text-[8px] uppercase tracking-[0.5em] text-white/40 font-bold">Achat & Location</span>
-            </div>
           </Link>
 
           {/* Desktop Links */}

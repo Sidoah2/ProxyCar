@@ -20,7 +20,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${inter.variable} font-sans scroll-smooth`}>
+    <html lang="fr" className={`${inter.variable} font-sans scroll-smooth`} data-scroll-behavior="smooth">
       <body className="bg-black text-white font-sans selection:bg-primary selection:text-white overflow-hidden">
         <Preloader />
         {children}

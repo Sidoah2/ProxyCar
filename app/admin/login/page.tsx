@@ -19,24 +19,12 @@ const AdminLoginPage = () => {
     setError("");
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const idToken = await userCredential.user.getIdToken();
-
-      // Exchange ID Token for a session cookie
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idToken }),
-      });
-
-      if (res.ok) {
-        router.push("/admin/dashboard");
-      } else {
-        const data = await res.json();
-        setError(data.error || "Login failed");
-        await auth.signOut();
-      }
+      await signInWithEmailAndPassword(auth, email, password);
+      // Firebase Auth automatically persists the session on the client.
+      // We can redirect immediately to the dashboard.
+      router.push("/admin/dashboard");
     } catch (err: any) {
+      console.error("Login Error:", err);
       setError("Email ou mot de passe incorrect");
     } finally {
       setLoading(false);
@@ -48,7 +36,7 @@ const AdminLoginPage = () => {
       <div className="w-full max-w-md space-y-12">
         <div className="text-center space-y-4">
           <span className="text-primary font-bold uppercase tracking-[0.5em] text-[10px]">Secure Access</span>
-          <h1 className="text-4xl font-display font-bold uppercase italic tracking-tighter">
+          <h1 className="text-4xl font-display font-bold uppercase italic tracking-tighter text-white">
             ADMIN <span className="text-white/20">PORTAL</span>
           </h1>
         </div>
