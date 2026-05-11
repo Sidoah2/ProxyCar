@@ -85,7 +85,7 @@ export default function ReviewForm({ defaultServiceType = 'GLOBAL', relatedId, o
         comment,
         serviceType,
         relatedId: relatedId || null,
-        status: 'NEW', // New reviews need approval
+        status: 'VISIBLE', // Reviews are visible by default
         createdAt: serverTimestamp(),
       });
 

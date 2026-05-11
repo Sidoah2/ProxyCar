@@ -116,7 +116,7 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
       try {
         let q = query(
           collection(db, 'reviews'),
-          where('status', '==', 'APPROVED'),
+          where('status', 'in', ['VISIBLE', 'APPROVED', 'NEW']),
           orderBy('createdAt', 'desc'),
           firestoreLimit(limit)
         );
@@ -124,7 +124,7 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
         if (filter !== 'ALL') {
           q = query(
             collection(db, 'reviews'),
-            where('status', '==', 'APPROVED'),
+            where('status', 'in', ['VISIBLE', 'APPROVED', 'NEW']),
             where('serviceType', '==', filter),
             orderBy('createdAt', 'desc'),
             firestoreLimit(limit)
@@ -134,7 +134,7 @@ export default function ReviewsList({ serviceType, relatedId, limit = 20 }: Revi
         if (relatedId) {
           q = query(
             collection(db, 'reviews'),
-            where('status', '==', 'APPROVED'),
+            where('status', 'in', ['VISIBLE', 'APPROVED', 'NEW']),
             where('relatedId', '==', relatedId),
             orderBy('createdAt', 'desc'),
             firestoreLimit(limit)

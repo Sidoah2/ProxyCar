@@ -6,7 +6,7 @@ import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { db, storage, auth } from "@/app/lib/firebase";
 import { Lead, Listing, Reservation, Review, ServiceType } from "@/app/lib/types";
-import { LayoutDashboard, Car, FileText, LogOut, ChevronRight, Calendar, ExternalLink, MessageCircle, Mail, User, MapPin, Phone, Star, Trash2, EyeOff, Filter, AlertTriangle } from "lucide-react";
+import { LayoutDashboard, Car, FileText, LogOut, ChevronRight, Calendar, ExternalLink, MessageCircle, Mail, User, MapPin, Phone, Star, Trash2, Eye, EyeOff, Filter, AlertTriangle } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 const DashboardClient = () => {
@@ -127,15 +127,18 @@ const DashboardClient = () => {
     }
   };
 
-  const handleReviewDelete = async (id: string, action: "DELETE" | "HIDE") => {
+  const handleReviewAction = async (id: string, action: "DELETE" | "TOGGLE_VISIBILITY", currentStatus?: string) => {
     setReviewActionId(id);
     try {
       if (action === "DELETE") {
+        if (!confirm("Supprimer définitivement cet avis ?")) return;
         await deleteDoc(doc(db, "reviews", id));
+        setReviews((prev) => prev.filter((r) => r.id !== id));
       } else {
-        await updateDoc(doc(db, "reviews", id), { status: "HIDDEN" });
+        const newStatus = currentStatus === "HIDDEN" ? "VISIBLE" : "HIDDEN";
+        await updateDoc(doc(db, "reviews", id), { status: newStatus });
+        setReviews((prev) => prev.map((r) => r.id === id ? { ...r, status: newStatus as any } : r));
       }
-      setReviews((prev) => prev.filter((r) => r.id !== id));
     } catch (error) {
       console.error("Review Action Error:", error);
       alert("Erreur lors de l'action.");
@@ -388,15 +391,18 @@ const DashboardClient = () => {
                         <div className="flex gap-2">
                           <button
                             disabled={reviewActionId === review.id}
-                            onClick={() => handleReviewDelete(review.id, "HIDE")}
-                            className="w-9 h-9 rounded-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-yellow-400 hover:border-yellow-400/30 transition-all"
-                            title="Masquer"
+                            onClick={() => handleReviewAction(review.id, "TOGGLE_VISIBILITY", review.status)}
+                            className={`w-9 h-9 rounded-xl border flex items-center justify-center transition-all ${review.status === "HIDDEN"
+                                ? "text-green-400 border-green-400/20 hover:bg-green-400/10"
+                                : "text-white/40 border-white/10 hover:text-yellow-400 hover:border-yellow-400/30"
+                              }`}
+                            title={review.status === "HIDDEN" ? "Afficher" : "Masquer"}
                           >
-                            <EyeOff size={14} />
+                            {review.status === "HIDDEN" ? <Eye size={14} /> : <EyeOff size={14} />}
                           </button>
                           <button
                             disabled={reviewActionId === review.id}
-                            onClick={() => handleReviewDelete(review.id, "DELETE")}
+                            onClick={() => handleReviewAction(review.id, "DELETE")}
                             className="w-9 h-9 rounded-xl border border-white/10 flex items-center justify-center text-white/40 hover:text-red-400 hover:border-red-400/30 transition-all"
                             title="Supprimer"
                           >
